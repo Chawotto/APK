@@ -1,0 +1,71 @@
+#include <io.h>
+#include <dos.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <conio.h>
+
+int flag = 0;
+
+void interrupt(*st9)(...);
+void interrupt new9(...);
+void blink(int);
+
+int main()
+{
+	st9 = getvect(0x09);
+	setvect(0x09, new9);
+	while (!flag) 
+	{
+		blink(1);
+		blink(0);
+		blink(2);
+		blink(0);
+		blink(3);
+		blink(0);
+		blink(4);
+		blink(0);
+		blink(5);
+		blink(0);
+		blink(6);
+		blink(0);
+	}
+	setvect(0x09, st9);
+	system("cls");
+	return 0;
+}
+
+void interrupt new9(...) 
+{
+	char buf[5];
+	unsigned char code = inp(0x60);
+	if (code == 0x01) flag = 1;//esc
+	if (code != 0xFA && !flag) 
+	{
+		sprintf(buf, "0x%x ", code);
+		printf("code is %s\n", buf);
+	}
+	(*st9)();
+}
+
+void blink(int mask)
+{
+	outp(0x60, 0xED);//команда управления светодиодами
+	int i = 0;
+	while ((inp(0x64) & 2) != 0);
+	do
+	{
+		outp(0x60, mask);
+	} while (inp(0x60) == 0xFE && i++ < 3);//ошибка
+	if (i == 3)
+	{
+		printf("\nError\n");
+		flag = 1;
+	}
+	delay(100);
+}
+
+//60h-данные
+// коды возврата: FA и FE
+// 0000:0417h- флаги клавиш
+//64h-регистр статуса
+
